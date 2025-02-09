@@ -2,21 +2,24 @@
 
 extern crate actix_web;
 extern crate clap;
+extern crate serde_yaml;
 extern crate tracing;
 extern crate tracing_actix_web;
 extern crate tracing_log;
 extern crate tracing_subscriber;
 
-use actix_web::error;
+use crate::web::{UsersDatabase, WebState};
 use actix_web::middleware::{Compress, Logger};
 use actix_web::web::Data;
-use actix_web::{web as a_web, web, App, HttpRequest, HttpServer};
+use actix_web::{web as a_web, App, HttpServer};
 use clap::{crate_name, crate_version};
-use serde::{Deserialize, Serialize};
+use std::fs;
 use tracing::{info, Level};
 use tracing_actix_web::TracingLogger;
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
+
+mod web;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -51,6 +54,13 @@ async fn main() -> std::io::Result<()> {
                 .default_value("users_database.yaml")
                 .help("Path to the Authelia users_database.yaml file"),
         )
+        .arg(
+            clap::Arg::new("auth_url")
+                .short('u')
+                .long("auth-url")
+                .required(true)
+                .help("The callback URL for performing auth"),
+        )
         .get_matches();
 
     let ip = matches.get_one::<String>("ip").unwrap().clone();
@@ -61,6 +71,7 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .unwrap();
     let config_path = matches.get_one::<String>("conf").unwrap().clone();
+    let auth_url = matches.get_one::<String>("auth_url").unwrap().clone();
 
     info!(
         "Starting {} v{}: http://{}:{} for {}",
@@ -71,38 +82,21 @@ async fn main() -> std::io::Result<()> {
         config_path
     );
 
+    let raw_config = fs::read_to_string(config_path).expect("Unable to find users database file");
+    let config = serde_yaml::from_str::<UsersDatabase>(raw_config.as_str())
+        .expect("Unable to parse YAML in users database file");
+
     HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
             .wrap(Logger::default())
             .wrap(Compress::default())
-            .route("webfinger", a_web::get().to(webfinger))
+            .app_data(Data::new(WebState::new(config.clone(), auth_url.clone())))
+            .route("webfinger", a_web::get().to(web::webfinger))
     })
     .bind(format!("{}:{}", ip, port))?
     .run()
     .await
-}
-
-#[derive(Debug, Deserialize)]
-struct WebfingerParams {
-    rel: String,
-    resource: String,
-}
-
-#[derive(Debug, Serialize)]
-struct WebfingerOutputLinks {
-    rel: String,
-    href: String,
-}
-
-#[derive(Debug, Serialize)]
-struct WebfingerOutput {
-    subject: String,
-    links: Vec<WebfingerOutputLinks>,
-}
-
-async fn webfinger(req: HttpRequest) -> Result<web::Json<WebfingerOutput>, error::Error> {
-    todo!()
 }
 
 #[cfg(target_os = "windows")]
