@@ -11,10 +11,10 @@ extern crate tracing_subscriber;
 use crate::web::{UsersDatabase, WebState};
 use actix_web::middleware::{Compress, Logger};
 use actix_web::web::Data;
-use actix_web::{App, HttpServer, web as a_web};
+use actix_web::{web as a_web, App, HttpServer};
 use clap::{crate_name, crate_version};
 use std::fs;
-use tracing::{Level, info};
+use tracing::{info, Level};
 use tracing_actix_web::TracingLogger;
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
@@ -94,7 +94,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(WebState::new(config.clone(), auth_url.clone())))
             .route("webfinger", a_web::get().to(web::webfinger))
     })
-    .bind(format!("{}:{}", ip, port))?
+    .bind(format!("{ip}:{port}"))?
     .run()
     .await
 }

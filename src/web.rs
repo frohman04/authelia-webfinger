@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, error, web as a_web};
+use actix_web::{error, web as a_web, HttpRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -76,8 +76,7 @@ pub async fn webfinger(
         }))
     } else {
         Err(error::ErrorNotFound(format!(
-            "No user with email address {} exists",
-            request_email_addr
+            "No user with email address {request_email_addr} exists"
         )))
     }
 }
