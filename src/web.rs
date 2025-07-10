@@ -1,4 +1,4 @@
-use actix_web::{error, web as a_web, HttpRequest};
+use actix_web::{HttpRequest, error, web as a_web};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
