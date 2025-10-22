@@ -19,6 +19,7 @@ pub struct UsersDatabase {
 
 #[derive(Clone)]
 pub struct WebState {
+    // email -> username
     config: HashMap<String, String>,
     auth_url: String,
 }
