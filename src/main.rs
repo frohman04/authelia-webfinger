@@ -2,7 +2,7 @@
 
 extern crate actix_web;
 extern crate clap;
-extern crate serde_yaml;
+extern crate serde_saphyr;
 extern crate tracing;
 extern crate tracing_actix_web;
 extern crate tracing_log;
@@ -83,7 +83,7 @@ async fn main() -> std::io::Result<()> {
     );
 
     let raw_config = fs::read_to_string(config_path).expect("Unable to find users database file");
-    let config = serde_yaml::from_str::<UsersDatabase>(raw_config.as_str())
+    let config = serde_saphyr::from_str::<UsersDatabase>(raw_config.as_str())
         .expect("Unable to parse YAML in users database file");
 
     HttpServer::new(move || {
