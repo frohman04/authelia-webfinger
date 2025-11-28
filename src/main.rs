@@ -1,13 +1,5 @@
 #![forbid(unsafe_code)]
 
-extern crate axum;
-extern crate clap;
-extern crate serde_saphyr;
-extern crate tokio;
-extern crate tracing;
-extern crate tracing_log;
-extern crate tracing_subscriber;
-
 use crate::web::{UsersDatabase, WebState};
 use axum::Router;
 use axum::routing::get;
@@ -17,21 +9,17 @@ use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{Level, info};
-use tracing_log::LogTracer;
-use tracing_subscriber::FmtSubscriber;
 
 mod web;
 
 #[tokio::main]
 async fn main() {
     let ansi_enabled = fix_ansi_term();
-    LogTracer::init().expect("routing log to tracing failed");
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+    tracing_subscriber::fmt()
         .with_ansi(ansi_enabled)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+        .with_max_level(Level::DEBUG)
+        .init();
 
     let matches = clap::Command::new("authelia_webfinger")
         .version(crate_version!())
@@ -91,9 +79,12 @@ async fn main() {
         .route("/webfinger", get(web::webfinger))
         .with_state(WebState::new(config.clone(), auth_url.clone()))
         .layer(
-            ServiceBuilder::new()
-                .layer(CompressionLayer::new())
-                .layer(TraceLayer::new_for_http()),
+            ServiceBuilder::new().layer(CompressionLayer::new()).layer(
+                TraceLayer::new_for_http()
+                    .on_request(())
+                    .on_eos(())
+                    .on_body_chunk(()),
+            ),
         );
     let listener = tokio::net::TcpListener::bind(format!("{ip}:{port}"))
         .await
