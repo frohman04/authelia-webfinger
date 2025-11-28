@@ -52,8 +52,8 @@ async fn main() {
             clap::Arg::new("conf")
                 .short('c')
                 .long("conf")
-                .default_value("users_database.yaml")
-                .help("Path to the Authelia users_database.yaml file"),
+                .default_value("users_database.yml")
+                .help("Path to the Authelia users_database.yml file"),
         )
         .arg(
             clap::Arg::new("auth_url")
