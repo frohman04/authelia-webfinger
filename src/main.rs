@@ -1,28 +1,26 @@
 #![forbid(unsafe_code)]
 
-extern crate actix_web;
+extern crate axum;
 extern crate clap;
 extern crate serde_saphyr;
+extern crate tokio;
 extern crate tracing;
-extern crate tracing_actix_web;
 extern crate tracing_log;
 extern crate tracing_subscriber;
 
 use crate::web::{UsersDatabase, WebState};
-use actix_web::middleware::{Compress, Logger};
-use actix_web::web::Data;
-use actix_web::{App, HttpServer, web as a_web};
+use axum::Router;
+use axum::routing::get;
 use clap::{crate_name, crate_version};
 use std::fs;
 use tracing::{Level, info};
-use tracing_actix_web::TracingLogger;
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
 
 mod web;
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() {
     let ansi_enabled = fix_ansi_term();
     LogTracer::init().expect("routing log to tracing failed");
 
@@ -86,17 +84,13 @@ async fn main() -> std::io::Result<()> {
     let config = serde_saphyr::from_str::<UsersDatabase>(raw_config.as_str())
         .expect("Unable to parse YAML in users database file");
 
-    HttpServer::new(move || {
-        App::new()
-            .wrap(TracingLogger::default())
-            .wrap(Logger::default())
-            .wrap(Compress::default())
-            .app_data(Data::new(WebState::new(config.clone(), auth_url.clone())))
-            .route("webfinger", a_web::get().to(web::webfinger))
-    })
-    .bind(format!("{ip}:{port}"))?
-    .run()
-    .await
+    let app = Router::new()
+        .route("/webfinger", get(web::webfinger))
+        .with_state(WebState::new(config.clone(), auth_url.clone()));
+    let listener = tokio::net::TcpListener::bind(format!("{ip}:{port}"))
+        .await
+        .unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 #[cfg(target_os = "windows")]

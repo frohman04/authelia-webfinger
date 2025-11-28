@@ -1,4 +1,7 @@
-use actix_web::{HttpRequest, error, web as a_web};
+use axum::Json;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -38,7 +41,7 @@ impl WebState {
 }
 
 #[derive(Debug, Deserialize)]
-struct WebfingerParams {
+pub struct WebfingerParams {
     rel: String,
     resource: String,
 }
@@ -55,11 +58,31 @@ pub struct WebfingerResponse {
     links: Vec<WebfingerResponseLinks>,
 }
 
+pub enum WebfingerError {
+    UserNotFound(String),
+}
+
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    message: String,
+}
+
+impl IntoResponse for WebfingerError {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            WebfingerError::UserNotFound(email) => (
+                StatusCode::NOT_FOUND,
+                format!("No user with email address {email} exists"),
+            ),
+        };
+        (status, Json(ErrorResponse { message })).into_response()
+    }
+}
+
 pub async fn webfinger(
-    req: HttpRequest,
-    data: a_web::Data<WebState>,
-) -> Result<a_web::Json<WebfingerResponse>, error::Error> {
-    let params = a_web::Query::<WebfingerParams>::from_query(req.query_string())?;
+    Query(params): Query<WebfingerParams>,
+    State(data): State<WebState>,
+) -> Result<Json<WebfingerResponse>, WebfingerError> {
     let request_email_addr = params
         .resource
         .strip_prefix("acct:")
@@ -68,7 +91,7 @@ pub async fn webfinger(
     let valid_user = data.config.contains_key(&request_email_addr);
 
     if valid_user {
-        Ok(a_web::Json(WebfingerResponse {
+        Ok(Json(WebfingerResponse {
             subject: params.resource.clone(),
             links: vec![WebfingerResponseLinks {
                 rel: params.rel.clone(),
@@ -76,8 +99,6 @@ pub async fn webfinger(
             }],
         }))
     } else {
-        Err(error::ErrorNotFound(format!(
-            "No user with email address {request_email_addr} exists"
-        )))
+        Err(WebfingerError::UserNotFound(request_email_addr))
     }
 }
