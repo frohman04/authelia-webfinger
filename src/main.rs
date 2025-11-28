@@ -13,6 +13,9 @@ use axum::Router;
 use axum::routing::get;
 use clap::{crate_name, crate_version};
 use std::fs;
+use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
+use tower_http::trace::TraceLayer;
 use tracing::{Level, info};
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
@@ -86,7 +89,12 @@ async fn main() {
 
     let app = Router::new()
         .route("/webfinger", get(web::webfinger))
-        .with_state(WebState::new(config.clone(), auth_url.clone()));
+        .with_state(WebState::new(config.clone(), auth_url.clone()))
+        .layer(
+            ServiceBuilder::new()
+                .layer(CompressionLayer::new())
+                .layer(TraceLayer::new_for_http()),
+        );
     let listener = tokio::net::TcpListener::bind(format!("{ip}:{port}"))
         .await
         .unwrap();
