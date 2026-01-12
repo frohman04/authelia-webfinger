@@ -804,9 +804,9 @@ dependencies = [
 
 [[package]]
 name = "serde-saphyr"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be7f28bb35aab6f9cdc5f464f9bbda0b1e3908766e819557111cc13e58ce7915"
+checksum = "45400dbf0a2c4c2af106c08eb1028b3e45bea3cd45517d3a0e8170b86597122f"
 dependencies = [
  "ahash",
  "annotate-snippets",
@@ -815,11 +815,11 @@ dependencies = [
  "garde",
  "nohash-hasher",
  "num-traits",
- "ryu",
  "saphyr-parser",
  "serde",
  "serde_json",
  "smallvec 2.0.0-alpha.12",
+ "zmij",
 ]
 
 [[package]]
@@ -1270,6 +1270,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "zmij"
+version = "1.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac93432f5b761b22864c774aac244fa5c0fd877678a4c37ebf6cf42208f9c9ec"
 
 [[package]]
 name = "zstd"
